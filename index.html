@@ -1,4 +1,3 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <!doctype html>
 <html lang="en">
 <head>
@@ -35,6 +34,47 @@
   #snd:focus-visible { outline:1px solid rgba(217,214,207,.5); outline-offset:2px; }
   #snd[aria-pressed="true"] { opacity:.6; }
   #snd[aria-pressed="false"] span { text-decoration:line-through; text-decoration-thickness:1px; }
+
+  /* ---------- gallery ---------- */
+  html.g, html.g body { touch-action:pan-y; }
+  #gal { position:fixed; inset:0; z-index:20; background:#0a0a0a; overflow-y:auto; overflow-x:hidden;
+    scroll-snap-type:y mandatory; overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+    opacity:0; visibility:hidden; transition:opacity 1.4s ease, visibility 0s linear 1.4s; outline:none; scrollbar-width:none; }
+  #gal::-webkit-scrollbar { display:none; }
+  #gal.open { opacity:1; visibility:visible; transition:opacity 1.4s ease; }
+  #gal section { height:100vh; height:100dvh; scroll-snap-align:start; scroll-snap-stop:always;
+    display:flex; align-items:center; justify-content:center; }
+  .row { display:flex; align-items:flex-start; padding-right:var(--nw); }
+  .num { width:var(--nw); flex:none; box-sizing:border-box; padding-right:2.4vw; text-align:right;
+    font-family:'Jost','Helvetica Neue',Arial,sans-serif; font-weight:300; color:#d9d6cf;
+    opacity:0; transform:translateY(6px); transition:opacity 1.6s ease .5s, transform 1.6s ease .5s; }
+  .num b { display:block; font-weight:300; font-size:clamp(28px,3.2vw,46px); letter-spacing:.08em; line-height:1; opacity:.6; }
+  .num i { display:block; font-style:normal; font-size:11px; letter-spacing:.32em; margin-top:10px; opacity:.32; }
+  .shot { margin:0; padding:10px; border:1px solid rgba(217,214,207,.16); line-height:0; }
+  .shot img { display:block; height:min(84vh, 84dvh); width:auto; max-width:62vw; aspect-ratio:1365/2048; object-fit:contain;
+    background:#0d0d0d; opacity:0; filter:brightness(.15) blur(6px); transform:scale(1.02);
+    transition:opacity 1.8s ease, filter 2.2s ease, transform 2.6s cubic-bezier(.16,1,.3,1); }
+  section.in .shot img { opacity:1; filter:none; transform:none; }
+  section.in .num { opacity:1; transform:none; }
+  :root { --nw:16vw; }
+  .end { flex-direction:column; gap:14px; }
+  .end button, #gsurf { background:none; border:0; cursor:pointer; color:#d9d6cf;
+    font:300 13px/1 'Jost','Helvetica Neue',Arial,sans-serif; letter-spacing:.32em; padding:10px 12px; }
+  .end button { opacity:.5; transition:opacity .4s; } .end button:hover { opacity:.9; }
+  .end span { display:block; width:1px; height:56px; background:linear-gradient(transparent,rgba(217,214,207,.45)); }
+  #gsurf { position:fixed; z-index:21; top:calc(14px + env(safe-area-inset-top,0px)); right:calc(14px + env(safe-area-inset-right,0px));
+    opacity:0; visibility:hidden; transition:opacity .8s; }
+  #gal.open ~ #gsurf { opacity:.3; visibility:visible; } #gal.open ~ #gsurf:hover { opacity:.75; }
+  #gsurf:focus-visible, .end button:focus-visible { outline:1px solid rgba(217,214,207,.5); outline-offset:2px; }
+  #ggrain { position:fixed; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; opacity:.045; }
+  #gal section { position:relative; z-index:1; }
+  @media (max-width: 760px), (max-aspect-ratio: 4/5) {
+    .row { flex-direction:column; padding-right:0; }
+    .num { width:auto; padding:0 0 12px 1px; text-align:left; display:flex; align-items:baseline; gap:12px; }
+    .num b { font-size:22px; } .num i { margin-top:0; }
+    .shot { padding:6px; }
+    .shot img { height:auto; width:calc(100vw - 52px); max-width:none; max-height:76dvh; }
+  }
 </style>
 </head>
 <body>
@@ -44,6 +84,23 @@
   <h1 id="word">afelrosili</h1>
 </div></div>
 <button id="snd" aria-pressed="false" aria-label="Sound"><span>sound</span></button>
+<div id="gal" tabindex="-1" role="region" aria-label="Stones">
+  <canvas id="ggrain" aria-hidden="true"></canvas>
+  <section aria-label="Stone 01 of 11"><div class="row"><div class="num"><b>01</b><i>/ 11</i></div><figure class="shot"><img alt="Stone 01" width="1365" height="2048" decoding="async" loading="eager" sizes="(max-width:760px) 100vw, 62vw" srcset="stones/01-s.webp 800w, stones/01-l.webp 1365w" src="stones/01-l.webp"></figure></div></section>
+  <section aria-label="Stone 02 of 11"><div class="row"><div class="num"><b>02</b><i>/ 11</i></div><figure class="shot"><img alt="Stone 02" width="1365" height="2048" decoding="async" loading="eager" sizes="(max-width:760px) 100vw, 62vw" srcset="stones/02-s.webp 800w, stones/02-l.webp 1365w" src="stones/02-l.webp"></figure></div></section>
+  <section aria-label="Stone 03 of 11"><div class="row"><div class="num"><b>03</b><i>/ 11</i></div><figure class="shot"><img alt="Stone 03" width="1365" height="2048" decoding="async" loading="lazy" sizes="(max-width:760px) 100vw, 62vw" srcset="stones/03-s.webp 800w, stones/03-l.webp 1365w" src="stones/03-l.webp"></figure></div></section>
+  <section aria-label="Stone 04 of 11"><div class="row"><div class="num"><b>04</b><i>/ 11</i></div><figure class="shot"><img alt="Stone 04" width="1365" height="2048" decoding="async" loading="lazy" sizes="(max-width:760px) 100vw, 62vw" srcset="stones/04-s.webp 800w, stones/04-l.webp 1365w" src="stones/04-l.webp"></figure></div></section>
+  <section aria-label="Stone 05 of 11"><div class="row"><div class="num"><b>05</b><i>/ 11</i></div><figure class="shot"><img alt="Stone 05" width="1365" height="2048" decoding="async" loading="lazy" sizes="(max-width:760px) 100vw, 62vw" srcset="stones/05-s.webp 800w, stones/05-l.webp 1365w" src="stones/05-l.webp"></figure></div></section>
+  <section aria-label="Stone 06 of 11"><div class="row"><div class="num"><b>06</b><i>/ 11</i></div><figure class="shot"><img alt="Stone 06" width="1365" height="2048" decoding="async" loading="lazy" sizes="(max-width:760px) 100vw, 62vw" srcset="stones/06-s.webp 800w, stones/06-l.webp 1365w" src="stones/06-l.webp"></figure></div></section>
+  <section aria-label="Stone 07 of 11"><div class="row"><div class="num"><b>07</b><i>/ 11</i></div><figure class="shot"><img alt="Stone 07" width="1365" height="2048" decoding="async" loading="lazy" sizes="(max-width:760px) 100vw, 62vw" srcset="stones/07-s.webp 800w, stones/07-l.webp 1365w" src="stones/07-l.webp"></figure></div></section>
+  <section aria-label="Stone 08 of 11"><div class="row"><div class="num"><b>08</b><i>/ 11</i></div><figure class="shot"><img alt="Stone 08" width="1365" height="2048" decoding="async" loading="lazy" sizes="(max-width:760px) 100vw, 62vw" srcset="stones/08-s.webp 800w, stones/08-l.webp 1365w" src="stones/08-l.webp"></figure></div></section>
+  <section aria-label="Stone 09 of 11"><div class="row"><div class="num"><b>09</b><i>/ 11</i></div><figure class="shot"><img alt="Stone 09" width="1365" height="2048" decoding="async" loading="lazy" sizes="(max-width:760px) 100vw, 62vw" srcset="stones/09-s.webp 800w, stones/09-l.webp 1365w" src="stones/09-l.webp"></figure></div></section>
+  <section aria-label="Stone 10 of 11"><div class="row"><div class="num"><b>10</b><i>/ 11</i></div><figure class="shot"><img alt="Stone 10" width="1365" height="2048" decoding="async" loading="lazy" sizes="(max-width:760px) 100vw, 62vw" srcset="stones/10-s.webp 800w, stones/10-l.webp 1365w" src="stones/10-l.webp"></figure></div></section>
+  <section aria-label="Stone 11 of 11"><div class="row"><div class="num"><b>11</b><i>/ 11</i></div><figure class="shot"><img alt="Stone 11" width="1365" height="2048" decoding="async" loading="lazy" sizes="(max-width:760px) 100vw, 62vw" srcset="stones/11-s.webp 800w, stones/11-l.webp 1365w" src="stones/11-l.webp"></figure></div></section>
+  <section class="end"><span></span><button id="gup">surface</button></section>
+</div>
+<button id="gsurf" aria-label="Back to surface">surface</button>
+
 <script>
 (function(){
   const IW=1200, IH=1800, frame=document.getElementById('frame'), cv=document.getElementById('c'), fb=document.getElementById('fallback');
@@ -107,6 +164,46 @@
   }
   addEventListener('pointerup', endDrag); addEventListener('pointercancel', endDrag);
   document.documentElement.addEventListener('mouseleave', ()=>{ tgt=0; });
+  // ---------- gallery ----------
+  const gal=document.getElementById('gal'), gg=document.getElementById('ggrain');
+  let galClose=null, galOpen=false, endTimer=0, grainRAF=0;
+  const io=new IntersectionObserver(es=>es.forEach(en=>{
+    const sec=en.target;
+    if(en.isIntersecting && en.intersectionRatio>.55){
+      sec.classList.add('in');
+      const nx=sec.nextElementSibling && sec.nextElementSibling.querySelector('img'); if(nx) nx.loading='eager';
+      if(sec.classList.contains('end')){ clearTimeout(endTimer); endTimer=setTimeout(closeGallery, 2200); }
+    } else if(sec.classList.contains('end')) clearTimeout(endTimer);
+  }),{root:gal, threshold:[0,.55,.9]});
+  gal.querySelectorAll('section').forEach(s=>io.observe(s));
+  // grain
+  const gx=gg.getContext('2d'), frames=[];
+  function mkGrain(){
+    frames.length=0; const w=Math.ceil(innerWidth/2), h=Math.ceil(innerHeight/2); gg.width=w; gg.height=h;
+    for(let f=0;f<4;f++){ const c=document.createElement('canvas'); c.width=w; c.height=h; const x=c.getContext('2d'), d=x.createImageData(w,h);
+      for(let i=0;i<d.data.length;i+=4){ const v=Math.random()*255; d.data[i]=d.data[i+1]=d.data[i+2]=v; d.data[i+3]=255; }
+      x.putImageData(d,0,0); frames.push(c); }
+  }
+  let gi=0, gl0=0;
+  function grain(t){ if(!galOpen) return; if(t-gl0>80){ gl0=t; gx.drawImage(frames[gi++%4],0,0); } grainRAF=requestAnimationFrame(grain); }
+  function openGallery(onClose){
+    galClose=onClose; galOpen=true;
+    gal.querySelectorAll('section').forEach(s=>{ s.classList.remove('in'); io.unobserve(s); });
+    gal.scrollTop=0; document.documentElement.classList.add('g');
+    mkGrain(); grainRAF=requestAnimationFrame(grain);
+    requestAnimationFrame(()=>{ gal.classList.add('open'); gal.focus({preventScroll:true}); gal.querySelectorAll('section').forEach(s=>io.observe(s)); });
+  }
+  function closeGallery(){
+    if(!galOpen) return; galOpen=false; clearTimeout(endTimer);
+    gal.classList.remove('open'); document.documentElement.classList.remove('g');
+    cancelAnimationFrame(grainRAF);
+    setTimeout(()=>{ gal.scrollTop=0; const cb=galClose; galClose=null; if(cb) cb(); }, 1400);
+  }
+  document.getElementById('gup').addEventListener('click', closeGallery);
+  document.getElementById('gsurf').addEventListener('click', closeGallery);
+  addEventListener('keydown', e=>{ if(galOpen && e.key==='Escape') closeGallery(); });
+  gal.addEventListener('pointerdown', e=>e.stopPropagation());
+  if(location.hash==='#stones') setTimeout(()=>openGallery(()=>{}), 200);
   let gl=null, rect=[0,0,1,1], dpr=1;
   let why='';
   const opts={antialias:false,premultipliedAlpha:false,powerPreference:'default'};
@@ -378,6 +475,7 @@
       }
     });
     (function loop(){
+      if(phase==='gallery'){ requestAnimationFrame(loop); return; }
       const el=(performance.now()-t0)/1000;
       const k=Math.min(Math.max((el-DELAY)/(DUR||1e-6),0),1);
       const e=k<.5 ? 8*k*k*k*k : 1-Math.pow(-2*k+2,4)/2;
@@ -414,7 +512,7 @@
         const bp=Math.min(tt/.7,1), dp=Math.min(Math.max((tt-.5)/1.9,0),1);
         xo = 45 + bp*bp*bp*700; tremor = 3.5*Math.exp(-tt*4)*Math.sin(tt*60);
         zm = Math.pow(16, Math.pow(dp,1.6)); dv = dp;
-        if(tt>3.9){ phase='idle'; S=0; lock=false; cur=0; tgt=0; restart(); }
+        if(tt>3.9){ phase='gallery'; openGallery(()=>{ phase='idle'; S=0; lock=false; cur=0; tgt=0; restart(); }); }
       }
       gl.uniform1f(U('shr'), reduce?0:cur*live);
       gl.uniform1f(U('xo'), xo); gl.uniform1f(U('zm'), zm); gl.uniform1f(U('dv'), dv);
@@ -444,5 +542,3 @@
 </script>
 </body>
 </html>
-
-</body></html>
