@@ -35,7 +35,6 @@
   #snd:focus-visible { outline:1px solid rgba(217,214,207,.5); outline-offset:2px; }
   #snd[aria-pressed="true"] { opacity:.6; }
   #snd[aria-pressed="false"] span { text-decoration:line-through; text-decoration-thickness:1px; }
-  @media (prefers-reduced-motion: reduce){ #word span{ transition:opacity 1s ease; transform:none; } }
 </style>
 </head>
 <body>
@@ -55,7 +54,7 @@
   const hs=i=>{ const x=Math.sin(i*127.1+3.7*311.7)*43758.5453; return x-Math.floor(x); };
   const vn=x=>{ const i=Math.floor(x), f=x-i, u=f*f*(3-2*f); return hs(i)*(1-u)+hs(i+1)*u; };
   const sstep=(a,b,x)=>{ const t=Math.min(Math.max((x-a)/(b-a),0),1); return t*t*(3-2*t); };
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce = false;
   const SND={ rustle:null, crumble:null };
   let wordAt=0, falling=false;
   const spans=()=>[...wd.querySelectorAll('span')];
