@@ -65,8 +65,11 @@
     spans().forEach(sp=>sp.getAnimations().forEach(a=>a.cancel()));
     requestAnimationFrame(()=>{ wd.classList.remove('reset'); requestAnimationFrame(showWord); });
   }
-  function fall(){
-    if(falling || !wordAt || performance.now()-wordAt < 5200) return;
+  let rt=0, rt2=0, lock=false;
+  function fall(force){
+    if(!force && (lock || falling || !wordAt || performance.now()-wordAt < 5200)) return;
+    clearTimeout(rt); clearTimeout(rt2);
+    if(force) spans().forEach(sp=>sp.getAnimations().forEach(a=>a.cancel()));
     falling=true;
     const ss=spans(); let last=0;
     ss.forEach((sp,i)=>{
@@ -77,16 +80,17 @@
       ], { duration:dur, delay:d, easing:'cubic-bezier(.55,0,.85,.45)', fill:'forwards' });
       if(SND.crumble) setTimeout(SND.crumble, d+dur*.55);
     });
-    setTimeout(()=>{ replayWord(); setTimeout(()=>{ falling=false; }, 600); }, last+1300);
+    if(!force) rt=setTimeout(()=>{ replayWord(); rt2=setTimeout(()=>{ falling=false; }, 600); }, last+1300);
   }
   let tgt=0, cur=0, vel=0, drag=null;
   const onBtn=e=>e.target.closest && e.target.closest('#snd');
   document.addEventListener('pointerdown', e=>{
-    if(onBtn(e)) return;
+    if(onBtn(e) || lock) return;
     if(e.pointerType==='mouse'){ fall(); return; }
     drag={ id:e.pointerId, x:e.clientX, y:e.clientY, t:performance.now(), moved:0 };
   });
   addEventListener('pointermove', e=>{
+    if(lock) return;
     if(e.pointerType==='mouse'){
       const dx=e.clientX/innerWidth-.5, dy=e.clientY/innerHeight-.5; tgt=(dx*.8813-dy*.47255)*30; return;
     }
@@ -161,7 +165,7 @@
   if(!gl){ fail(); return; }
   const vs=`attribute vec2 p; varying vec2 uv; void main(){ uv=vec2(p.x*.5+.5, .5-p.y*.5); gl_Position=vec4(p,0.,1.); }`;
   const fs=`precision highp float; varying vec2 uv;
-  uniform sampler2D img, msk; uniform float t, amp, seed, dbg, sep, live, shake, gw, cloud, aft, shr;
+  uniform sampler2D img, msk; uniform float t, amp, seed, dbg, sep, live, shake, gw, cloud, aft, shr, zm, dv, st, xo;
   float gwl;
   uniform vec2 vsz; uniform vec4 rc;
   const vec2 R=vec2(1200.,1800.);
@@ -237,10 +241,11 @@
   }
   void main(){
     vec2 sp = uv*vsz;
-    vec2 p = (sp - rc.xy)/rc.zw*R + NRM*shake;
+    vec2 p0 = (sp - rc.xy)/rc.zw*R;
+    vec2 p = C + (p0 - C)/zm + NRM*shake;
     float sh = shadow(p);
     gwl = gw * (1. - .8*sh);
-    float op = sep + abs(shr)*.12;
+    float op = sep + abs(shr)*.12 + xo;
     vec2 pu = p + NRM*op + DIR*shr, pl = p - NRM*op - DIR*shr;
     float du = side(pu), dl = side(pl);
     vec3 c = vec3(0.);
@@ -254,7 +259,17 @@
     c *= 1. - .55*sh;
     float ds = dust(p, side(p));
     c = mix(c, vec3(.46,.45,.43), ds*.6);
-    c += (h2(floor(sp) + vec2(floor(mod(t*30.,61.))*7.31, 0.)) - .5) * .045;
+    if (st > 0.) {
+      float sd = side(p), sa = dot(p - C, DIR);
+      float sdust = st*st * exp(-abs(sd)/(10. + 40.*st)) * smoothstep(.45, .85, fbm(vec2(sa/40. - t*.4, sd/14. + t*2.2)));
+      c = mix(c, vec3(.42,.41,.40), sdust*.55);
+    }
+    if (dv > 0.) {
+      float sk = n(vec2(sp.x/3.2, sp.y/140. + t*11.));
+      c += smoothstep(.84, .97, sk) * .22 * sin(3.14159*dv);
+      c *= 1. - smoothstep(.3, 1., dv);
+    }
+    c += (h2(floor(sp) + vec2(floor(mod(t*30.,61.))*7.31, 0.)) - .5) * .045 * (1. - .7*dv);
     gl_FragColor = vec4(c,1.);
   }`;
   function sh(type,src){ const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s); if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) why+=(type===gl.VERTEX_SHADER?'VS: ':'FS: ')+gl.getShaderInfoLog(s)+'\n'; return s; }
@@ -279,9 +294,10 @@
     gl.uniform1f(U('seed'), 7.31);
     const DELAY=reduce?0:1.8, DUR=reduce?0:2.9, END=DELAY+DUR;
     let textOn=false, t0=performance.now(), impacted=false, grind=null;
+    let phase='idle', S=0, tb=0, lastT=performance.now(), lastTgt=0;
     // ---- audio
     const btn=document.getElementById('snd');
-    let ac=null, rubG=null, master=null, windG=null, windBP=null, noiseBuf=null, soundOn=false;
+    let ac=null, rubG=null, droneG=null, droneLP=null, dro=[], master=null, windG=null, windBP=null, noiseBuf=null, soundOn=false;
     function initAudio(){
       ac=new (window.AudioContext||window.webkitAudioContext)();
       master=ac.createGain(); master.gain.value=.9; master.connect(ac.destination);
@@ -295,6 +311,10 @@
       const rs=ac.createBufferSource(); rs.buffer=noiseBuf; rs.loop=true;
       const rl=ac.createBiquadFilter(); rl.type='lowpass'; rl.frequency.value=210; rl.Q.value=.9;
       rubG=ac.createGain(); rubG.gain.value=0; rs.connect(rl); rl.connect(rubG); rubG.connect(master); rs.start();
+      droneLP=ac.createBiquadFilter(); droneLP.type='lowpass'; droneLP.frequency.value=120; droneLP.Q.value=1.4;
+      droneG=ac.createGain(); droneG.gain.value=0; droneLP.connect(droneG); droneG.connect(master);
+      [[41,'sine',1],[41.6,'sine',1],[55,'sawtooth',.35]].forEach(([fq,ty,lv])=>{ const o=ac.createOscillator(); o.type=ty; o.frequency.value=fq;
+        const g=ac.createGain(); g.gain.value=lv; o.connect(g); g.connect(droneLP); o.start(); dro.push({o,base:fq}); });
       SND.rustle=()=>{ if(!soundOn) return; for(let i=0;i<10;i++) setTimeout(()=>{ if(soundOn) noise(.3,'bandpass',2400+Math.random()*1800,1.4,.022,.05,.45); }, i*280+120); };
       SND.crumble=()=>{ if(!soundOn) return; noise(.4,'lowpass',700+Math.random()*500,.8,.06,.01,.35); noise(.3,'bandpass',3000,1.2,.015,.02,.25); };
     }
@@ -315,6 +335,18 @@
       noise(.6,'lowpass',260,.7,.9,.008,.55);
       noise(2,'bandpass',1800,.8,.05,.25,2.2);
     }
+    function breakSnd(){
+      const n=ac.currentTime;
+      impact(); noise(1.2,'lowpass',180,.7,1.,.01,1.4);
+      droneG.gain.cancelScheduledValues(n); droneG.gain.setValueAtTime(Math.max(droneG.gain.value,.0001),n);
+      droneG.gain.linearRampToValueAtTime(.34,n+.5); droneG.gain.exponentialRampToValueAtTime(.0001,n+2.5);
+      droneLP.frequency.cancelScheduledValues(n); droneLP.frequency.setValueAtTime(droneLP.frequency.value,n); droneLP.frequency.linearRampToValueAtTime(900,n+.6);
+      dro.forEach(d=>{ d.o.frequency.cancelScheduledValues(n); d.o.frequency.setValueAtTime(d.o.frequency.value,n); d.o.frequency.exponentialRampToValueAtTime(d.base*.42,n+2.4); });
+      const s2=ac.createBufferSource(); s2.buffer=noiseBuf; s2.loop=true;
+      const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.Q.value=.9; bp.frequency.setValueAtTime(300,n+.4); bp.frequency.exponentialRampToValueAtTime(2400,n+2.3);
+      const g=ac.createGain(); g.gain.setValueAtTime(.0001,n+.4); g.gain.exponentialRampToValueAtTime(.13,n+1.9); g.gain.exponentialRampToValueAtTime(.0001,n+2.45);
+      s2.connect(bp); bp.connect(g); g.connect(master); s2.start(n+.4); s2.stop(n+2.6);
+    }
     function startGrind(){
       const s=ac.createBufferSource(); s.buffer=noiseBuf; s.loop=true;
       const fl=ac.createBiquadFilter(); fl.type='lowpass'; fl.frequency.value=140;
@@ -325,7 +357,7 @@
     function restart(){
       t0=performance.now(); textOn=false; impacted=false;
       if(grind){ grind.s.stop(); grind=null; }
-      wordAt=0; falling=false;
+      wordAt=0; falling=false; clearTimeout(rt); clearTimeout(rt2);
       wd.classList.add('reset'); wd.classList.remove('on'); void wd.offsetWidth;
       spans().forEach(sp=>sp.getAnimations().forEach(a=>a.cancel()));
       requestAnimationFrame(()=>wd.classList.remove('reset'));
@@ -362,16 +394,40 @@
       gl.uniform1f(U('cloud'), cloud);
       gl.uniform1f(U('aft'), reduce?0:after);
       { const pv=cur; cur+=(tgt-cur)*.045; vel=cur-pv; }
+      const nowp=performance.now(), dt=Math.min((nowp-lastT)/1000,.05); lastT=nowp;
+      let xo=0, zm=1, dv=0, tremor=0;
+      if(phase==='idle'){
+        const ready = !reduce && after>6;
+        if(ready) S=Math.max(0, S + Math.abs(tgt-lastTgt)*.006 - .3*dt); else S=Math.max(0,S-.6*dt);
+        xo = S*S*45; tremor = S*S*2.2*(Math.sin(el*57)+.6*Math.sin(el*91.3));
+        if(ready && S>=1){ phase='break'; tb=nowp; lock=true; drag=null; tgt=0; fall(true); if(soundOn&&ac) breakSnd(); }
+      }
+      lastTgt=tgt;
+      if(phase==='break'){
+        const tt=(nowp-tb)/1000;
+        const bp=Math.min(tt/.7,1), dp=Math.min(Math.max((tt-.5)/1.9,0),1);
+        xo = 45 + bp*bp*bp*700; tremor = 3.5*Math.exp(-tt*4)*Math.sin(tt*60);
+        zm = Math.pow(16, Math.pow(dp,1.6)); dv = dp;
+        if(tt>3.9){ phase='idle'; S=0; lock=false; cur=0; tgt=0; restart(); }
+      }
       gl.uniform1f(U('shr'), reduce?0:cur*live);
+      gl.uniform1f(U('xo'), xo); gl.uniform1f(U('zm'), zm); gl.uniform1f(U('dv'), dv);
+      gl.uniform1f(U('st'), phase==='idle'?S:0);
+      gl.uniform1f(U('shake'), shake + tremor);
       if(!textOn && after>.6){ textOn=true; showWord(); }
       if(soundOn && ac){
         const now=ac.currentTime;
         if(k>0 && k<1 && !grind && !impacted) startGrind();
         if(grind) grind.g.gain.setTargetAtTime(.35*Math.sin(Math.PI*Math.min(k*1.15,1)), now, .08);
         if(!impacted && after>=0){ impacted=true; if(grind){ grind.g.gain.cancelScheduledValues(now); grind.g.gain.setValueAtTime(0,now); grind.s.stop(now+.05); grind=null; } impact(); }
-        rubG.gain.setTargetAtTime(Math.min(Math.abs(vel)*.22,.32)*live, now, .06);
+        rubG.gain.setTargetAtTime(phase==='idle' ? Math.min(Math.abs(vel)*.22,.32)*live : 0, now, .06);
+        if(phase==='idle'){
+          droneG.gain.setTargetAtTime(Math.pow(S,1.6)*.28, now, .15);
+          droneLP.frequency.setTargetAtTime(110+S*520, now, .2);
+          dro.forEach(d=>d.o.frequency.setTargetAtTime(d.base*(1+S*.14), now, .2));
+        }
         const ge=gw*(1-.8*cov);
-        windG.gain.setTargetAtTime(live*(.025+.11*ge), now, .4);
+        windG.gain.setTargetAtTime(phase==='idle' ? live*(.025+.11*ge) : 0, now, phase==='idle'?.4:.3);
         windBP.frequency.setTargetAtTime(280+520*ge, now, .5);
       } else if(after>=0) impacted=true;
       gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
