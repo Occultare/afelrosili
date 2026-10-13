@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300&display=swap" rel="stylesheet">
 <style>
   :root { box-sizing: border-box; padding-top: env(safe-area-inset-top,0px); padding-bottom: env(safe-area-inset-bottom,0px); background:#000; }
-  html, body { height:100%; margin:0; background:#000; overflow:hidden; }
+  html, body { height:100%; margin:0; background:#000; overflow:hidden; touch-action:none; overscroll-behavior:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
   #c { position:fixed; left:0; top:0; display:block; }
   #dbg { position:fixed; left:8px; top:8px; z-index:9; font:11px/1.4 monospace; color:#9f9; background:rgba(0,0,0,.7); padding:6px 8px; white-space:pre-wrap; max-width:90vw; }
   #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
@@ -79,10 +79,30 @@
     });
     setTimeout(()=>{ replayWord(); setTimeout(()=>{ falling=false; }, 600); }, last+1300);
   }
-  document.addEventListener('pointerdown', e=>{ if(e.target.closest && e.target.closest('#snd')) return; fall(); });
-  let tgt=0, cur=0, vel=0;
-  addEventListener('pointermove', e=>{ if(e.pointerType!=='mouse') return;
-    const dx=e.clientX/innerWidth-.5, dy=e.clientY/innerHeight-.5; tgt=(dx*.8813-dy*.47255)*30; });
+  let tgt=0, cur=0, vel=0, drag=null;
+  const onBtn=e=>e.target.closest && e.target.closest('#snd');
+  document.addEventListener('pointerdown', e=>{
+    if(onBtn(e)) return;
+    if(e.pointerType==='mouse'){ fall(); return; }
+    drag={ id:e.pointerId, x:e.clientX, y:e.clientY, t:performance.now(), moved:0 };
+  });
+  addEventListener('pointermove', e=>{
+    if(e.pointerType==='mouse'){
+      const dx=e.clientX/innerWidth-.5, dy=e.clientY/innerHeight-.5; tgt=(dx*.8813-dy*.47255)*30; return;
+    }
+    if(!drag || e.pointerId!==drag.id) return;
+    const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
+    drag.moved=Math.max(drag.moved, Math.hypot(dx,dy));
+    const along=dx*.8813-dy*.47255;
+    tgt=34*Math.tanh(along/180);
+  });
+  function endDrag(e){
+    if(!drag || e.pointerId!==drag.id) return;
+    const tap = drag.moved<12 && performance.now()-drag.t<450;
+    drag=null; tgt=0;
+    if(tap && e.type==='pointerup') fall();
+  }
+  addEventListener('pointerup', endDrag); addEventListener('pointercancel', endDrag);
   document.documentElement.addEventListener('mouseleave', ()=>{ tgt=0; });
   let gl=null, rect=[0,0,1,1], dpr=1;
   let why='';
