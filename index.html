@@ -147,20 +147,27 @@
       x.fillStyle='#070707'; x.fillRect(-4000,-4000,9200,9800);
       x.drawImage(fb,0,0,1200,1800); x.restore();
     }
-    const t1=performance.now(), DL=reduce?0:1.8, DU=reduce?0:2.9;
-    let on=false;
-    (function f(){
+    const DL=reduce?0:1.8, DU=reduce?0:2.9;
+    let on=false, t1=0, k=0;
+    function draw(){
       const vw=innerWidth, vh=innerHeight; const W2=Math.round(vw*dpr), H2=Math.round(vh*dpr);
       c2.style.width=vw+'px'; c2.style.height=vh+'px'; if(c2.width!==W2||c2.height!==H2){ c2.width=W2; c2.height=H2; }
-      const el=(performance.now()-t1)/1000, k=Math.min(Math.max((el-DL)/(DU||1e-6),0),1);
       const e=k<.5?8*k*k*k*k:1-Math.pow(-2*k+2,4)/2;
       const sc=rect[2]/1200, sep=(1-e)*820*Math.max(1,(c2.width/rect[2])*.9);
       x.setTransform(1,0,0,1,0,0); x.fillStyle='#000'; x.fillRect(0,0,c2.width,c2.height);
       x.setTransform(sc,0,0,sc,rect[0],rect[1]);
       piece(1,sep); piece(-1,sep);
+    }
+    function f(){
+      const el=(performance.now()-t1)/1000; k=Math.min(Math.max((el-DL)/(DU||1e-6),0),1);
+      try { draw(); } catch(err){ why+='\n2d: '+err.message; c2.remove(); fb.style.visibility='visible'; }
       if(!on && el>DL+DU+.6){ on=true; showWord(); }
       if(el<DL+DU+1) requestAnimationFrame(f);
-    })();
+    }
+    addEventListener('resize', ()=>{ if(t1) draw(); });
+    const go=()=>{ t1=performance.now(); requestAnimationFrame(f); };
+    const ready = fb.decode ? fb.decode().catch(()=>{}) : Promise.resolve();
+    ready.then(()=>{ if(fb.complete && fb.naturalWidth) go(); else fb.addEventListener('load', go, {once:true}); });
   }
   if(!gl){ fail(); return; }
   const vs=`attribute vec2 p; varying vec2 uv; void main(){ uv=vec2(p.x*.5+.5, .5-p.y*.5); gl_Position=vec4(p,0.,1.); }`;
